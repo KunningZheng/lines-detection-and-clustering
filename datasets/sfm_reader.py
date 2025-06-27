@@ -63,12 +63,12 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, image_scale):
     sys.stdout.write('\n')
     return cam_infos
 
-def load_sparse_model(path_to_model, image_scale):
+def load_sparse_model(path_to_model, image_scale=1):
     '''
     获取相片的内外参,加载3D points和相片之间的关系
     - args
         - path_to_model:Colmap稀疏重建结果的路径
-        - image_scale:相片缩小的倍数
+        - image_scale:相片缩小的倍数,默认1,即不缩小
     - return
         - camera_dict:字典,和GS的cameras.json相同
         - points_in_images:字典
@@ -106,6 +106,7 @@ def load_sparse_model(path_to_model, image_scale):
         return camerasInfo, points_in_images
     # 起始ID是0就无需更新
     else:
+        points_in_images = []
         for key in points3d.keys():
             points_in_images.append(points3d[key].image_ids - 1)
         return camerasInfo, points_in_images
