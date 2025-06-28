@@ -14,7 +14,7 @@ Clustering_Workspace/
 │   │   ├── L3D++_data/
 │   │   │   ├── *.bin
 │   │   └── .txt
-│   ├── SAM_mask/
-│   │   ├── image_name/
-│   │   │   ├── *.png
+│   ├── SAM_Mask/
+│   │   ├── Single_Mask/
+│   │   ├── Merged_Mask/
 ```
