@@ -16,6 +16,7 @@ import cv2
 # internal
 from datasets.sfm_reader import load_sparse_model
 from datasets.overlap_detector import match_pair
+from datasets.mask_processor import merge_masks_to_npy
 
 if __name__ == '__main__':
     ####################################### 需要手动改变的参数 #######################################
@@ -30,30 +31,18 @@ if __name__ == '__main__':
     sparse_model_path = os.path.join(workspace_path, scene_name, 'Colmap','sparse')
     images_path = os.path.join(workspace_path, scene_name, 'Colmap', 'images')
     line3dpp_path = os.path.join(workspace_path, scene_name, 'Line3D++')
-    sam_mask_path = os.path.join(workspace_path, scene_name, 'SAM_Mask')
+    single_mask_path = os.path.join(workspace_path, scene_name, 'SAM_Mask', 'Single_Mask')
+    merged_mask_path = os.path.join(workspace_path, scene_name, 'SAM_Mask', 'Merged_Mask')
 
     # 预处理1：读取sparse model
     camerasInfo, points_in_images = load_sparse_model(sparse_model_path)
     # 预处理2：统计相片之间公共特征点的数量
     match_matrix = match_pair(camerasInfo, points_in_images, k_near=k_near)
-
-    # 预处理3：形成mask栅格图
+    # 预处理3：形成merged mask
+    merge_masks_to_npy(single_mask_path, merged_mask_path)
 
 
     img_info = {}
-
-
-
-    ####################### mask文件夹循环 #######################
-    for mask_folder in range(1, 6):  # 假设有5个mask文件夹
-        testpp = 0
-        ### mask形成一个栅格图（值为mask_id） ###
-
-
-        ### 查找每个mask下的线段并记录 ###
-
-
-
     ####################### 每张航片循环 #######################
     for img_id, img_filename in img_info.items():
         ### 查找临近航片 ###
