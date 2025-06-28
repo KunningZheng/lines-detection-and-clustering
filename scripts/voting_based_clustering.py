@@ -11,12 +11,14 @@ sys.path.append(str(project_root))
 import os
 import numpy as np
 import cv2
-
+from tqdm import tqdm
 
 # internal
 from datasets.sfm_reader import load_sparse_model
 from datasets.overlap_detector import match_pair
 from datasets.mask_processor import merge_masks_to_npy
+from datasets.line3dpp_loader import parse_line_segments
+from clustering.mask_association import associate_lines_to_masks
 
 if __name__ == '__main__':
     ####################################### 需要手动改变的参数 #######################################
@@ -34,29 +36,53 @@ if __name__ == '__main__':
     single_mask_path = os.path.join(workspace_path, scene_name, 'SAM_Mask', 'Single_Mask')
     merged_mask_path = os.path.join(workspace_path, scene_name, 'SAM_Mask', 'Merged_Mask')
 
+    # 创建输出目录
+    intermediate_output_path = os.path.join(workspace_path, scene_name, 'intermediate_outputs')
+    os.makedirs(intermediate_output_path, exist_ok=True)
+
     # 预处理1：读取sparse model
     camerasInfo, points_in_images = load_sparse_model(sparse_model_path)
     # 预处理2：统计相片之间公共特征点的数量
     match_matrix = match_pair(camerasInfo, points_in_images, k_near=k_near)
     # 预处理3：形成merged mask
     merge_masks_to_npy(single_mask_path, merged_mask_path)
+    # 预处理4：统计各mask对应的2D线段
+    for cam_dict in tqdm(camerasInfo):
+      mask_to_lines = associate_lines_to_masks(
+        cam_dict, 
+        merged_mask_path, 
+        line3dpp_path,
+        output_path=os.path.join(intermediate_output_path, 'associate_lines_to_masks')
+    )
 
 
-    img_info = {}
+    
     ####################### 每张航片循环 #######################
-    for img_id, img_filename in img_info.items():
-        ### 查找临近航片 ###
-        
+    for cam_dict in tqdm(camerasInfo):
+        img_name = cam_dict['img_name'].split('/')[-1]
+        width, height = cam_dict['width'], cam_dict['height']
 
+        # 读取当前航片对应的merged_mask
+        mask_path = os.path.join(merged_mask_path, img_name + '.npy')
+        merged_mask = np.load(mask_path, allow_pickle=True)
+        mask_unique_ids = np.unique(merged_mask)
+
+        # 读取当前航片对应的2D线段
+        lines2d = parse_line_segments(line3dpp_path, cam_dict['id'], width, height)
+
+        # 预处理4：统计各mask对应的2D线段
+
+        ### 查找临近航片 ###
+        neighbor_ids = match_matrix[cam_dict['id']][1:]
+        
         ####################### 每个mask循环 #######################
-        for mask_id in range(1, 6):  # 假设有5个mask
+        for mask_id in mask_unique_ids:
             # 读取当前mask中的线段
 
             ####################### 每张临近航片循环 #######################
-            for neighbor_id in range(1, 6): # 假设有5个临近航片
-                testpp = 0
+            for neighbor_id in neighbor_ids:
                 ### step1:2D线段对应的3D线段投影到临近航片 ###
-                # 临近行片的栅格图
+                tt = 0
                 
                 ### step2:线段可见性判断 ###
 

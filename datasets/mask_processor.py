@@ -245,3 +245,26 @@ def cover_masks_to_npy(sam_mask_path, output_dir):
         visualize_path = os.path.join(output_dir, 'visualization')
         os.makedirs(visualize_path, exist_ok=True)
         visualize_merged_mask(merged_mask, output_path=os.path.join(visualize_path, f"{folder_name}_vis.png"), show=False)
+
+
+def split_masks(merged_mask, mask_id, resize=None):
+    """
+    从合并的掩码中提取指定ID的掩码，并可选地调整大小
+    参数:
+        merged_mask: 合并后的掩码数组 (2D numpy数组)
+        mask_id: 要提取的掩码ID
+        resize: 可选的调整大小参数 (元组, 形式是(width, height))
+    返回:
+        mask: 提取的掩码bool数组
+    """
+    # 从合并的掩码中提取指定ID的掩码
+    mask = (merged_mask == mask_id)
+    # 如果需要将调整掩码大小
+    if resize is not None:
+        # 将bool转换为uint8 (0和255)
+        mask_uint8 = mask.astype('uint8') * 255
+        # 调整大小
+        mask_resized = cv2.resize(mask_uint8, resize, interpolation=cv2.INTER_NEAREST)
+        # 转换回bool
+        mask = mask_resized > 0
+    return mask
