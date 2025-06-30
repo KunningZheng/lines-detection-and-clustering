@@ -18,7 +18,7 @@ from datasets.sfm_reader import load_sparse_model
 from datasets.overlap_detector import match_pair
 from datasets.mask_processor import merge_masks_to_npy
 from datasets.line3dpp_loader import parse_line_segments
-from clustering.mask_association import load_mask_to_lines
+from clustering.mask_association import load_mask_lines_association
 
 if __name__ == '__main__':
     ####################################### 需要手动改变的参数 #######################################
@@ -46,8 +46,8 @@ if __name__ == '__main__':
     match_matrix = match_pair(camerasInfo, points_in_images, k_near=k_near)
     # 预处理3：形成merged mask
     merge_masks_to_npy(single_mask_path, merged_mask_path)
-    # 预处理4：统计各mask对应的2D线段
-    all_mask_to_lines = load_mask_to_lines(
+    # 预处理4：关联mask和线段
+    all_mask_to_lines, all_line_to_mask = load_mask_lines_association(
         camerasInfo, 
         merged_mask_path, 
         line3dpp_path, 
@@ -60,37 +60,39 @@ if __name__ == '__main__':
         img_name = cam_dict['img_name'].split('/')[-1]
         width, height = cam_dict['width'], cam_dict['height']
 
-        # 读取当前航片对应的merged_mask
-        mask_path = os.path.join(merged_mask_path, img_name + '.npy')
-        merged_mask = np.load(mask_path, allow_pickle=True)
-        mask_unique_ids = np.unique(merged_mask)
-
         # 读取当前航片对应的2D线段
         lines2d = parse_line_segments(line3dpp_path, cam_dict['id'], width, height)
-
-        # 预处理4：统计各mask对应的2D线段
-
-        ### 查找临近航片 ###
+        # 读取当前航片mask和2D线段的关联
+        mask_to_lines = all_mask_to_lines.get(cam_dict['id'], {})
+        # 查找临近航片
         neighbor_ids = match_matrix[cam_dict['id']][1:]
         
         ####################### 每个mask循环 #######################
-        for mask_id in mask_unique_ids:
+        for mask_id,associated_lines_id in mask_to_lines.items():
             # 读取当前mask中的线段
-
+            associated_lines2d = lines2d[associated_lines_id]
+            # 初始化投票向量
+            neighbor_votes=[]
             ####################### 每张临近航片循环 #######################
             for neighbor_id in neighbor_ids:
-                ### step1:2D线段对应的3D线段投影到临近航片 ###
-                tt = 0
+                ### step1:查找同名线段 ###
                 
-                ### step2:线段可见性判断 ###
+                ### step2:根据同名线段的mask数量投票 ###
+                vote = 0 
+                neighbor_votes.append(vote)
+                # vote=0，能见部分少
+                # vote=1，在邻近航片中有唯一mask
+                # vote>1，在邻近航片中有多个mask
 
-                ### step3:基于可见线段对应的mask投票 ###
-                # 共视线段
+            ### step3：判定当前mask是否是correct mask ###
+            # 如果是false mask，则跳过
+            # 如果是correct mask
+            ####################### 每张临近航片循环 #######################
+            for idx in len(neighbor_ids):
+                # 如果vote=1，则为有效投票，建立跨视角的掩码关联
+                if neighbor_votes[idx] == 1:
+                    # 记录当前mask和邻近航片的关联
+                    pass  # TODO: 实现跨视角掩码关联逻辑          
 
-                ### step4:统计有效投票 ###
-
-                ### step5:判断掩码有效性并记录有效关联 ###
-
-### 建立跨视角的掩码关联 ###
 
 ### 统计线段聚类实例 ###

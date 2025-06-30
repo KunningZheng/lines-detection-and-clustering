@@ -71,6 +71,12 @@ def associate_lines_to_masks(cam_dict, merged_mask_path, line3dpp_path, output_p
         if mask_id != -1:
             mask_to_lines.setdefault(mask_id, []).append(line_id)
 
+    # 构建线段到mask的映射
+    line_to_mask = {}
+    for line_id, (mask_id, count) in enumerate(lines2d_mask_id):
+        mask_id = int(mask_id)  # 确保mask_id是整数类型
+        if mask_id != -1:  # 移除没有mask关联的线段
+            line_to_mask[line_id] = mask_id
 
     # 显示或保存结果
     if show:
@@ -87,7 +93,7 @@ def associate_lines_to_masks(cam_dict, merged_mask_path, line3dpp_path, output_p
         cv2.imwrite(os.path.join(output_path, filename), cv2.cvtColor(visualize_img, cv2.COLOR_RGB2BGR))
 
             
-    return mask_to_lines
+    return mask_to_lines, line_to_mask
 
 
 def visualize_masked_lines(image_shape, lines2d, lines2d_mask_id, merged_mask):
@@ -150,9 +156,9 @@ def visualize_masked_lines(image_shape, lines2d, lines2d_mask_id, merged_mask):
     return img
 
 
-def load_mask_to_lines(camerasInfo, merged_mask_path, line3dpp_path, intermediate_output_path):
+def load_mask_lines_association(camerasInfo, merged_mask_path, line3dpp_path, intermediate_output_path):
     """
-    加载或计算所有相机的 mask_to_lines 关联数据
+    加载或计算所有相机的 mask 和 lines 关联数据
     参数:
         camerasInfo: 相机信息列表
         merged_mask_path: 合并掩码路径
@@ -160,16 +166,24 @@ def load_mask_to_lines(camerasInfo, merged_mask_path, line3dpp_path, intermediat
         intermediate_output_path: 中间输出路径，用于存储结果
     返回:
         all_mask_to_lines: 字典，key为相机ID，value为该相机的mask_to_lines关联数据
+        all_line_to_mask: 字典，key为相机ID，value为该相机的line_to_mask关联数据
     """
     all_mask_to_lines_path = os.path.join(intermediate_output_path, 'all_mask_to_lines.json')
-    if os.path.exists(all_mask_to_lines_path):
-        print(f"Loading existing mask to lines associations")
+    all_line_to_mask_path = os.path.join(intermediate_output_path, 'all_line_to_mask.json')
+    
+    # 如果已经存在所有mask与线段的关联数据，则直接加载
+    if os.path.exists(all_mask_to_lines_path) and os.path.exists(all_line_to_mask_path):
+        print(f"Loading existing mask and lines associations")
         with open(all_mask_to_lines_path, 'r') as f:
             all_mask_to_lines = json.load(f)
+        with open(all_line_to_mask_path, 'r') as f:
+            all_line_to_mask = json.load(f)
+    # 如果不存在，则计算所有相机的mask与线段的关联
     else:
         all_mask_to_lines = {}
+        all_line_to_mask = {}
         for cam_dict in tqdm(camerasInfo, desc="Computing mask to lines associations"):
-            mask_to_lines = associate_lines_to_masks(
+            mask_to_lines, line_to_mask = associate_lines_to_masks(
                 cam_dict, 
                 merged_mask_path, 
                 line3dpp_path,
@@ -177,7 +191,10 @@ def load_mask_to_lines(camerasInfo, merged_mask_path, line3dpp_path, intermediat
             )
             # 记录所有相机的结果
             all_mask_to_lines[cam_dict['id']] = mask_to_lines
+            all_line_to_mask[cam_dict['id']] = line_to_mask
         # 保存所有mask与线段的关联
         with open(all_mask_to_lines_path, 'w') as f:
             json.dump(all_mask_to_lines, f, indent=4)
-    return all_mask_to_lines
+        with open(all_line_to_mask_path, 'w') as f:
+            json.dump(all_line_to_mask, f, indent=4)
+    return all_mask_to_lines, all_line_to_mask
