@@ -18,7 +18,7 @@ from datasets.sfm_reader import load_sparse_model
 from datasets.overlap_detector import match_pair
 from datasets.mask_processor import merge_masks_to_npy
 from datasets.line3dpp_loader import parse_line_segments
-from clustering.mask_association import associate_lines_to_masks
+from clustering.mask_association import load_mask_to_lines
 
 if __name__ == '__main__':
     ####################################### 需要手动改变的参数 #######################################
@@ -47,14 +47,12 @@ if __name__ == '__main__':
     # 预处理3：形成merged mask
     merge_masks_to_npy(single_mask_path, merged_mask_path)
     # 预处理4：统计各mask对应的2D线段
-    for cam_dict in tqdm(camerasInfo):
-      mask_to_lines = associate_lines_to_masks(
-        cam_dict, 
+    all_mask_to_lines = load_mask_to_lines(
+        camerasInfo, 
         merged_mask_path, 
-        line3dpp_path,
-        output_path=os.path.join(intermediate_output_path, 'associate_lines_to_masks')
+        line3dpp_path, 
+        intermediate_output_path
     )
-
 
     
     ####################### 每张航片循环 #######################

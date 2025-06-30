@@ -4,6 +4,8 @@ import numpy as np
 import cv2
 import random
 import matplotlib.pyplot as plt
+from tqdm import tqdm
+import json
 
 # internal
 from datasets.line3dpp_loader import parse_line_segments
@@ -35,13 +37,14 @@ def associate_lines_to_masks(cam_dict, merged_mask_path, line3dpp_path, output_p
     
     # 解析并栅格化2D线段
     lines2d = parse_line_segments(line3dpp_path, cam_dict['id'], width, height)
-    raster_lines = rasterize_lines((height, width), lines2d.reshape(-1, 4), show=True)
+    raster_lines = rasterize_lines((height, width), lines2d.reshape(-1, 4))
     
     # 初始化线段与mask的关联数组
     lines2d_mask_id = np.ones((lines2d.shape[0], 2), dtype=int) * -1
     
     # 处理每个mask
     for mask_id in mask_unique_ids:
+        mask_id = int(mask_id)  # 确保mask_id是整数类型
         # 跳过背景mask
         if mask_id == -1:  
             continue
@@ -64,6 +67,7 @@ def associate_lines_to_masks(cam_dict, merged_mask_path, line3dpp_path, output_p
     # 构建mask到线段的映射字典
     mask_to_lines = {}
     for line_id, (mask_id, _) in enumerate(lines2d_mask_id):
+        mask_id = int(mask_id)  # 确保mask_id是整数类型
         if mask_id != -1:
             mask_to_lines.setdefault(mask_id, []).append(line_id)
 
@@ -144,3 +148,36 @@ def visualize_masked_lines(image_shape, lines2d, lines2d_mask_id, merged_mask):
         cv2.line(img, pt1, pt2, color_dict[mask_id], thickness=2)
     
     return img
+
+
+def load_mask_to_lines(camerasInfo, merged_mask_path, line3dpp_path, intermediate_output_path):
+    """
+    加载或计算所有相机的 mask_to_lines 关联数据
+    参数:
+        camerasInfo: 相机信息列表
+        merged_mask_path: 合并掩码路径
+        line3dpp_path: 3D线段文件路径
+        intermediate_output_path: 中间输出路径，用于存储结果
+    返回:
+        all_mask_to_lines: 字典，key为相机ID，value为该相机的mask_to_lines关联数据
+    """
+    all_mask_to_lines_path = os.path.join(intermediate_output_path, 'all_mask_to_lines.json')
+    if os.path.exists(all_mask_to_lines_path):
+        print(f"Loading existing mask to lines associations")
+        with open(all_mask_to_lines_path, 'r') as f:
+            all_mask_to_lines = json.load(f)
+    else:
+        all_mask_to_lines = {}
+        for cam_dict in tqdm(camerasInfo, desc="Computing mask to lines associations"):
+            mask_to_lines = associate_lines_to_masks(
+                cam_dict, 
+                merged_mask_path, 
+                line3dpp_path,
+                output_path=os.path.join(intermediate_output_path, 'associate_lines_to_masks')
+            )
+            # 记录所有相机的结果
+            all_mask_to_lines[cam_dict['id']] = mask_to_lines
+        # 保存所有mask与线段的关联
+        with open(all_mask_to_lines_path, 'w') as f:
+            json.dump(all_mask_to_lines, f, indent=4)
+    return all_mask_to_lines
