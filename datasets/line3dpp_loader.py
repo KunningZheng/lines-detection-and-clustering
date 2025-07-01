@@ -41,3 +41,51 @@ def parse_line_segments(line3dpp_folder, img_id, width, height):
     segments[:, 3] = np.clip(segments[:, 3], 0, width - 1)
 
     return segments  # (N, 4)
+
+
+def parse_lines3dpp(folder_path):
+    """
+    解析 txt 文件，将 3D 线段存储到矩阵中，将对应的 2D 线段存储到列表中。
+
+    参数:
+    - folder_path: 包含 3D 线段数据的文件夹路径。
+
+    返回:
+    - three_d_lines: numpy 数组，存储所有 3D 线段，形状为 (total_3d_lines, 6)
+    - two_d_lines: 列表，存储每个 3D 线段对应的 2D 线段信息
+    """
+    lines3d = []  # 用于存储所有 3D 线段
+    residuals2d_for_lines3d = []    # 用于存储每个 3D 线段对应的 2D 线段
+
+    # 在指定文件夹中查找符合条件的文件
+    for filename in os.listdir(folder_path):
+        if filename.startswith("Line3D++") and filename.endswith(".txt"):
+            file_path = os.path.join(folder_path, filename)
+            break
+    
+    with open(file_path, 'r') as f:
+        for line in f:
+            data = line.strip().split()
+            
+            # 解析 3D 线段
+            n = int(data[0])  # 3D 线段数量
+            line3d = np.array(data[1:1 + n * 6], dtype=float).reshape(n, 6)
+            lines3d.append(line3d)
+            
+            # 解析 2D 线段
+            m_start_idx = 1 + n * 6
+            m = int(data[m_start_idx])  # 2D 线段数量
+            residuals2d = []
+            for i in range(m):
+                start_idx = m_start_idx + 1 + i * 6
+                cam_id = int(data[start_idx])
+                seg_id = int(data[start_idx + 1])
+                p1x, p1y, q1x, q1y = map(float, data[start_idx + 2:start_idx + 6])
+                residuals2d.append((cam_id, seg_id, p1x, p1y, q1x, q1y))
+            for j in range(n):
+                if n > 1:
+                    a = 0
+                residuals2d_for_lines3d.append(residuals2d)
+    # 将所有 3D 线段合并为一个矩阵
+    lines3d = np.vstack(lines3d).reshape(-1, 6)
+    return lines3d, residuals2d_for_lines3d
