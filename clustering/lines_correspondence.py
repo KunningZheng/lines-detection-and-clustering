@@ -50,3 +50,18 @@ class LineCorrespondence:
         # 步骤2: 找到该 3D 线段在目标相机中的投影
         cam_seg_dict = self.line3d_to_cam_seg[line3d_idx]
         return cam_seg_dict.get(tgt_cam, None)
+    
+    
+    def find_line3d_by_cam_seg(self, cam_id, seg_id):
+        """
+        根据相机ID和线段ID查找对应的3D线段索引
+        
+        参数:
+        - cam_id: 相机ID
+        - seg_id: 线段ID
+        
+        返回:
+        - 对应的3D线段索引 (如果存在)
+        - None (如果没有对应的3D线段)
+        """
+        return self.cam_seg_to_line3d.get((cam_id, seg_id), None)

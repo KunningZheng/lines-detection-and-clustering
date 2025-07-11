@@ -21,6 +21,7 @@ from datasets.mask_processor import merge_masks_to_npy
 from datasets.line3dpp_loader import parse_line_segments, parse_lines3dpp
 from clustering.mask_association import load_mask_lines_association
 from clustering.lines_correspondence import LineCorrespondence
+from clustering.lines_tools import visualize_line_clusters
 
 if __name__ == '__main__':
     ####################################### 需要手动改变的参数 #######################################
@@ -164,6 +165,25 @@ for node in all_nodes:
         cluster_id += 1
 
 # 打印聚类结果
-#print(f"Found {len(masks_clusters)} instance clusters")
+print(f"Found {len(masks_clusters)} instance clusters")
 #for cluster_id, masks in masks_clusters.items():
     #print(f"Cluster {cluster_id} contains {len(masks)} masks: {masks}")
+
+# 聚类3D线段
+lines3d_clusters = {}
+for cluster_id, masks in masks_clusters.items():
+    for mask in masks:
+        cam_id, mask_id = mask
+        # 获取当前mask对应的2D线段
+        associated_lines = all_mask_to_lines.get(str(cam_id), {}).get(str(mask_id), [])
+        # 获取2D线段对应的3D线段
+        for seg_id in associated_lines:
+            line3d_id = line_corr.find_line3d_by_cam_seg(cam_id, seg_id)
+            if line3d_id is not None:
+                lines3d_clusters.setdefault(cluster_id, set()).add(line3d_id)
+# 选择前100个线段最多的cluster
+largest_clusters = sorted(lines3d_clusters.values(), key=lambda cluster: len(cluster), reverse=True)[:10]
+# 将largest_clusters转换为字典
+largest_clusters = {i: cluster for i, cluster in enumerate(largest_clusters)}
+# 可视化3D线段聚类结果
+visualize_line_clusters(lines3d, largest_clusters)
