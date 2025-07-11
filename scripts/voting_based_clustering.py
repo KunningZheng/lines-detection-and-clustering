@@ -133,57 +133,57 @@ if __name__ == '__main__':
                         all_masks_association.setdefault((neighbor_id, neighbor_masks[idx]), []).append((cam_dict['id'], mask_id))       
 
 
-### 统计视角间关联的实例 ###
+    ### 统计视角间关联的实例 ###
 
 
-# 创建节点集合
-all_nodes = set(all_masks_association.keys())
-visited = set()
-masks_clusters = {}
-cluster_id = 0
+    # 创建节点集合
+    all_nodes = set(all_masks_association.keys())
+    visited = set()
+    masks_clusters = {}
+    cluster_id = 0
 
-# 使用BFS遍历图查找连通分量
-for node in all_nodes:
-    if node not in visited:
-        # 初始化新簇
-        current_cluster = []
-        queue = deque([node])
-        visited.add(node)
-        
-        while queue:
-            current_node = queue.popleft()
-            current_cluster.append(current_node)
+    # 使用BFS遍历图查找连通分量
+    for node in all_nodes:
+        if node not in visited:
+            # 初始化新簇
+            current_cluster = []
+            queue = deque([node])
+            visited.add(node)
             
-            # 遍历所有邻居
-            for neighbor in all_masks_association.get(current_node, []):
-                if neighbor not in visited:
-                    visited.add(neighbor)
-                    queue.append(neighbor)
-        
-        # 存储当前簇
-        masks_clusters[cluster_id] = current_cluster
-        cluster_id += 1
+            while queue:
+                current_node = queue.popleft()
+                current_cluster.append(current_node)
+                
+                # 遍历所有邻居
+                for neighbor in all_masks_association.get(current_node, []):
+                    if neighbor not in visited:
+                        visited.add(neighbor)
+                        queue.append(neighbor)
+            
+            # 存储当前簇
+            masks_clusters[cluster_id] = current_cluster
+            cluster_id += 1
 
-# 打印聚类结果
-print(f"Found {len(masks_clusters)} instance clusters")
-#for cluster_id, masks in masks_clusters.items():
-    #print(f"Cluster {cluster_id} contains {len(masks)} masks: {masks}")
+    # 打印聚类结果
+    print(f"Found {len(masks_clusters)} instance clusters")
+    #for cluster_id, masks in masks_clusters.items():
+        #print(f"Cluster {cluster_id} contains {len(masks)} masks: {masks}")
 
-# 聚类3D线段
-lines3d_clusters = {}
-for cluster_id, masks in masks_clusters.items():
-    for mask in masks:
-        cam_id, mask_id = mask
-        # 获取当前mask对应的2D线段
-        associated_lines = all_mask_to_lines.get(str(cam_id), {}).get(str(mask_id), [])
-        # 获取2D线段对应的3D线段
-        for seg_id in associated_lines:
-            line3d_id = line_corr.find_line3d_by_cam_seg(cam_id, seg_id)
-            if line3d_id is not None:
-                lines3d_clusters.setdefault(cluster_id, set()).add(line3d_id)
-# 选择前100个线段最多的cluster
-largest_clusters = sorted(lines3d_clusters.values(), key=lambda cluster: len(cluster), reverse=True)[:10]
-# 将largest_clusters转换为字典
-largest_clusters = {i: cluster for i, cluster in enumerate(largest_clusters)}
-# 可视化3D线段聚类结果
-visualize_line_clusters(lines3d, largest_clusters)
+    # 聚类3D线段
+    lines3d_clusters = {}
+    for cluster_id, masks in masks_clusters.items():
+        for mask in masks:
+            cam_id, mask_id = mask
+            # 获取当前mask对应的2D线段
+            associated_lines = all_mask_to_lines.get(str(cam_id), {}).get(str(mask_id), [])
+            # 获取2D线段对应的3D线段
+            for seg_id in associated_lines:
+                line3d_id = line_corr.find_line3d_by_cam_seg(cam_id, seg_id)
+                if line3d_id is not None:
+                    lines3d_clusters.setdefault(cluster_id, set()).add(line3d_id)
+    # 选择前100个线段最多的cluster
+    largest_clusters = sorted(lines3d_clusters.values(), key=lambda cluster: len(cluster), reverse=True)[:10]
+    # 将largest_clusters转换为字典
+    largest_clusters = {i: cluster for i, cluster in enumerate(largest_clusters)}
+    # 可视化3D线段聚类结果
+    visualize_line_clusters(lines3d, largest_clusters)
