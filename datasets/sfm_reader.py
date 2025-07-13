@@ -71,7 +71,8 @@ def load_sparse_model(path_to_model, image_scale=1):
         - image_scale:相片缩小的倍数,默认1,即不缩小
     - return
         - camera_dict:字典,和GS的cameras.json相同
-        - points_in_images:字典
+        - points_in_images: 数组
+        - points3d_xyz:字典, points3d的xyz坐标
     '''
     camerasInfo = {}
     points3d = {}
@@ -100,16 +101,20 @@ def load_sparse_model(path_to_model, image_scale=1):
     if camerasInfo[0]['id'] == 1:
         camerasInfo = [{**item, 'id': item['id'] - 1} for item in camerasInfo]
         points_in_images = []
+        points3d_xyz = {}
         # 加载3D sparse point时也需要注意更新为0
         for key in points3d.keys():
             points_in_images.append(points3d[key].image_ids - 1)
+            points3d_xyz[key] = points3d[key].xyz
         return camerasInfo, points_in_images
     # 起始ID是0就无需更新
     else:
         points_in_images = []
+        points3d_xyz = {}
         for key in points3d.keys():
-            points_in_images.append(points3d[key].image_ids - 1)
-        return camerasInfo, points_in_images
+            points_in_images.append(points3d[key].image_ids)
+            points3d_xyz[key] = points3d[key].xyz
+        return camerasInfo, points_in_images, points3d_xyz
 
 
 def read_depth(path):

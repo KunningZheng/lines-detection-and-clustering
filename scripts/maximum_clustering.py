@@ -127,7 +127,7 @@ if __name__ == '__main__':
     os.makedirs(intermediate_output_path, exist_ok=True)
 
     # 预处理1：读取sparse model
-    camerasInfo, points_in_images = load_sparse_model(sparse_model_path)
+    camerasInfo, points_in_images, _ = load_sparse_model(sparse_model_path)
     # 预处理2：统计相片之间公共特征点的数量
     match_matrix = match_pair(camerasInfo, points_in_images, k_near=k_near)
     # 预处理3：形成merged mask
@@ -158,8 +158,5 @@ if __name__ == '__main__':
         all_line3d_to_mask[cam_id] = line3d_to_mask
         
     lines3d_clusters = cluster_3d_segments(all_line3d_to_mask, required_views=1)
-    # 选择前100个线段最多的cluster
-    largest_clusters = sorted(lines3d_clusters.values(), key=lambda cluster: len(cluster), reverse=True)[:10]
-    # 将largest_clusters转换为字典
-    largest_clusters = {i: cluster for i, cluster in enumerate(largest_clusters)}
-    visualize_line_clusters(lines3d, largest_clusters)
+
+    visualize_line_clusters(lines3d, lines3d_clusters)

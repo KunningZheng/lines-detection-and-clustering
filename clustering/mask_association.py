@@ -198,3 +198,38 @@ def load_mask_lines_association(camerasInfo, merged_mask_path, line3dpp_path, in
         with open(all_line_to_mask_path, 'w') as f:
             json.dump(all_line_to_mask, f, indent=4)
     return all_mask_to_lines, all_line_to_mask
+
+
+def associate_projline_to_mask(line2d, cam_dict, merged_mask_path):
+    """
+    关联3D线段投影的2D线段与mask的对应关系
+    
+    参数:
+        line2d: 3D线段投影的2D线段的坐标,(2,2)
+        cam_dict: 相机信息字典
+        merged_mask_path: 合并掩码路径
+    
+    返回:
+        mask_to_lines: 字典，key为mask_id，value为关联的线段ID列表
+    """
+    img_name = cam_dict['img_name'].split('/')[-1]
+    width, height = int(cam_dict['width']), int(cam_dict['height'])
+    
+    # 读取当前航片的merged_mask
+    mask_path = os.path.join(merged_mask_path, img_name + '.npy')
+    merged_mask = np.load(mask_path, allow_pickle=True)
+    merged_mask = cv2.resize(merged_mask, (width, height), interpolation=cv2.INTER_NEAREST)
+    
+    # 解析并栅格化2D线段
+    # Scale line2d coordinates to match the mask dimensions
+    raster_lines = rasterize_lines((height, width), line2d.reshape(-1, 4))
+    raster_lines = np.where(raster_lines == -1, False, True)
+
+    mask_ids, counts = np.unique(merged_mask[raster_lines], return_counts=True)
+    # 取counts最多的mask_id
+    if len(mask_ids) > 0:
+        max_count_index = np.argmax(counts)
+        max_mask_id = mask_ids[max_count_index]
+    else:
+        max_mask_id = -1  # 如果没有有效的mask_id，返回-1
+    return max_mask_id
