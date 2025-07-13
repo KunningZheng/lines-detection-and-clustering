@@ -47,7 +47,7 @@ def visualize_line_clusters(lines3d, clusters):
     
     # 为每个聚类生成不同颜色
     n_clusters = len(clusters)
-    colors = plt.cm.tab10(np.linspace(0, 1, n_clusters))
+    colors = np.random.rand(n_clusters, 3)
     
     # 添加坐标系
     coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.5, origin=[0,0,0])
@@ -87,3 +87,85 @@ def visualize_line_clusters(lines3d, clusters):
     # 运行可视化
     vis.run()
     vis.destroy_window()
+
+
+def determine_line3d_visibility(cam_dict, line3d, points3d_xyz):
+
+    # 获取当前相机参数
+    cam_id = cam_dict['id']
+    R = cam_dict['rotation']
+    T = cam_dict['position']
+    fx = cam_dict['fx']
+    fy = cam_dict['fy']
+    width = cam_dict['width']
+    height = cam_dict['height']
+    
+    # 获取3D线段的两个端点
+    p1 = line3d[:3]
+    p2 = line3d[3:]
+    
+    # 计算线段中心点
+    center = (p1 + p2) / 2
+    
+    # ===  1.线段中心点与相机的夹角（视线方向与线段方向的夹角） ===
+    view_dir = center - T
+    view_dir = view_dir / np.linalg.norm(view_dir)
+    line_dir = p2 - p1
+    line_dir = line_dir / np.linalg.norm(line_dir)
+    angle = np.arccos(np.dot(view_dir, line_dir))
+    
+    # 如果夹角接近90度（垂直），线段在视角下几乎不可见
+    if abs(angle - np.pi/2) < np.pi/6:  # 30度阈值
+        return False
+
+
+    # ===  2.线段端点投影是否落入图像范围  ===
+    # 将3D点转换到相机坐标系
+    p1_cam = R @ p1 + T
+    p2_cam = R @ p2 + T
+    
+    # 检查深度是否为正（在相机前方）
+    if p1_cam[2] <= 0 or p2_cam[2] <= 0:
+        return False
+        
+    # 投影到图像平面
+    p1_proj = np.array([fx * p1_cam[0]/p1_cam[2], fy * p1_cam[1]/p1_cam[2]])
+    p2_proj = np.array([fx * p2_cam[0]/p2_cam[2], fy * p2_cam[1]/p2_cam[2]])
+    
+    # 检查投影点是否在图像范围内
+    if (p1_proj[0] < 0 or p1_proj[0] >= width or 
+        p1_proj[1] < 0 or p1_proj[1] >= height or
+        p2_proj[0] < 0 or p2_proj[0] >= width or 
+        p2_proj[1] < 0 or p2_proj[1] >= height):
+        return False
+        
+    # ===  3.利用稀疏点云遮挡测试  ===
+    # 计算线段在图像上的投影长度
+    #proj_length = np.linalg.norm(p1_proj - p2_proj)
+    #if proj_length < 10:  # 投影太短的线段不考虑
+        #return False
+        
+    # 检查线段中间是否有稀疏点云遮挡
+    # 采样线段上的点进行检查
+    for alpha in np.linspace(0.1, 0.9, 5):  # 采样5个点
+        sample_point = p1 * alpha + p2 * (1 - alpha)
+        sample_cam = R @ sample_point + T
+        
+        # 投影到图像平面
+        sample_proj = np.array([fx * sample_cam[0]/sample_cam[2], fy * sample_cam[1]/sample_cam[2]])
+        
+        # 检查该点附近是否有更近的3D点
+        for pt_id in cam_dict['points3D_ids']:
+            pt = points3d_xyz[pt_id]
+            pt_cam = R @ pt + T
+            if pt_cam[2] <= 0:  # 点在相机后方
+                continue
+                
+            pt_proj = np.array([fx * pt_cam[0]/pt_cam[2], fy * pt_cam[1]/pt_cam[2]])
+            dist = np.linalg.norm(pt_proj - sample_proj)
+            
+            # 如果附近有点且深度更小（更近），则认为被遮挡
+            if dist < 10 and pt_cam[2] < sample_cam[2] * 0.9:
+                return False
+    # 行号在前，列号在后
+    return (p1_proj[::-1], p2_proj[::-1])
