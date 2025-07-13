@@ -173,7 +173,7 @@ def load_mask_lines_association(camerasInfo, merged_mask_path, line3dpp_path, in
     
     # 如果已经存在所有mask与线段的关联数据，则直接加载
     if os.path.exists(all_mask_to_lines_path) and os.path.exists(all_line_to_mask_path):
-        print(f"Loading existing mask and lines associations")
+        print(f"Load existing mask and lines associations file")
         with open(all_mask_to_lines_path, 'r') as f:
             all_mask_to_lines = json.load(f)
         with open(all_line_to_mask_path, 'r') as f:

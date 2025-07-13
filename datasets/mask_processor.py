@@ -112,7 +112,7 @@ def merge_masks_to_npy(sam_mask_path, output_dir, overlap_threshold=0.5):
     
     # 获取所有文件夹并添加进度条
     folders = [f for f in os.listdir(sam_mask_path) if os.path.isdir(os.path.join(sam_mask_path, f))]
-    for folder_name in tqdm(folders, desc="Processing folders"):
+    for folder_name in tqdm(folders, desc="Processing mask folders"):
         folder_path = os.path.join(sam_mask_path, folder_name)
         output_path = os.path.join(output_dir, f"{folder_name}.npy")
 
