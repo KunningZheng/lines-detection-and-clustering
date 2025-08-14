@@ -4,7 +4,7 @@ def get_config():
     """Return configuration parameters for the clustering process."""
     config = {
         'workspace_path': '/home/rylynn/Pictures/Clustering_Workspace',
-        'scene_name': 'group_selectByPt_chunk3',
+        'scene_name': 'Shanghai_region1',
         'k_near': 10,
         'clustering_method': 'leiden'
     }

@@ -106,7 +106,7 @@ def load_sparse_model(path_to_model, image_scale=1):
         for key in points3d.keys():
             points_in_images.append(points3d[key].image_ids - 1)
             points3d_xyz[key] = points3d[key].xyz
-        return camerasInfo, points_in_images
+        return camerasInfo, points_in_images, points3d_xyz
     # 起始ID是0就无需更新
     else:
         points_in_images = []
