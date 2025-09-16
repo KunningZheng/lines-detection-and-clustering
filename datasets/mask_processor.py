@@ -98,14 +98,14 @@ def visualize_merged_mask(merged_mask, output_path=None, show=True, alpha=0.7, d
     return contours_img
 
 
-def merge_masks_to_npy(sam_mask_path, output_dir, overlap_threshold=0.5):
+def merge_masks(sam_mask_path, output_dir, overlap_threshold=0.5):
     """
-    将每个文件夹内的mask合并为一个NPY文件，使用新的合并策略：
+    将每个文件夹内的mask合并为一个文件，使用新的合并策略：
     如果小掩码的50%以上的区域在大掩码的范围内，则两个掩码合并
     
     参数:
         sam_mask_path: 包含mask文件夹的根目录
-        output_dir: 输出NPY文件的目录
+        output_dir: 输出文件夹的目录
         overlap_threshold: 重叠比例阈值(默认0.5)
     """
     os.makedirs(output_dir, exist_ok=True)
@@ -116,7 +116,7 @@ def merge_masks_to_npy(sam_mask_path, output_dir, overlap_threshold=0.5):
         if folder_name == 'visualization':
             continue
         folder_path = os.path.join(sam_mask_path, folder_name)
-        output_path = os.path.join(output_dir, f"{folder_name}.npy")
+        output_path = os.path.join(output_dir, f"{folder_name}_seg_uint16.png")
 
         # 检查是否已处理过
         if os.path.exists(output_path):
@@ -181,8 +181,11 @@ def merge_masks_to_npy(sam_mask_path, output_dir, overlap_threshold=0.5):
             # 将当前掩码信息添加到已处理列表中
             processed_masks.append((mask_id if not merged_areas else best_match_id, binary_mask))
         
-        # 保存为NPY文件
-        np.save(output_path, merged_mask)
+        # ID从0开始编号，整体加1
+        # 用Uint16 png 保存
+        merged_mask_uint16 = (merged_mask + 1).astype(np.uint16)
+        cv2.imwrite(output_path, merged_mask_uint16)
+        
 
         # 可视化合并后的掩码
         visualize_path = os.path.join(output_dir, 'visualization')

@@ -30,8 +30,9 @@ def associate_lines_to_masks(cam_dict, merged_mask_path, line3dpp_path, output_p
     width, height = int(cam_dict['width']), int(cam_dict['height'])
     
     # 读取当前航片的merged_mask
-    mask_path = os.path.join(merged_mask_path, img_name + '.npy')
-    merged_mask = np.load(mask_path, allow_pickle=True)
+    mask_path = os.path.join(merged_mask_path, img_name + '_seg_uint16.png')
+    merged_mask = cv2.imread(mask_path, cv2.IMREAD_UNCHANGED)
+    merged_mask = merged_mask.astype(np.int16) - 1  # 转回原始ID，背景为-1
     # 获取所有唯一的mask ID
     mask_unique_ids = np.unique(merged_mask)
     
@@ -176,8 +177,14 @@ def load_mask_lines_association(camerasInfo, merged_mask_path, line3dpp_path, in
         print(f"Load existing mask and lines associations file")
         with open(all_mask_to_lines_path, 'r') as f:
             all_mask_to_lines = json.load(f)
+        # Convert keys to int
+        all_mask_to_lines = {int(cam_id): {int(mask_id): lines for mask_id, lines in mask_to_lines.items()} 
+                             for cam_id, mask_to_lines in all_mask_to_lines.items()}
         with open(all_line_to_mask_path, 'r') as f:
             all_line_to_mask = json.load(f)
+        # Convert keys to int
+        all_line_to_mask = {int(cam_id): {int(line_id): int(mask_id) for line_id, mask_id in line_to_mask.items()} 
+                            for cam_id, line_to_mask in all_line_to_mask.items()}
     # 如果不存在，则计算所有相机的mask与线段的关联
     else:
         all_mask_to_lines = {}

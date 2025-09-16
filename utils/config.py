@@ -4,7 +4,7 @@ def get_config():
     """Return configuration parameters for the clustering process."""
     config = {
         'workspace_path': '/home/rylynn/Pictures/Clustering_Workspace',
-        'scene_name': 'Shanghai_region1',
+        'scene_name': 'Shanghai_Region5',
         'k_near': 10,
         'clustering_method': 'leiden'
     }
@@ -31,6 +31,14 @@ class PathManager:
     @property
     def line3dpp_path(self):
         return os.path.join(self.workspace_path, self.scene_name, 'Line3D++')
+    
+    @property
+    def groundtruth_path(self):
+        return os.path.join(self.workspace_path, self.scene_name, 'Groundtruth')
+    
+    @property
+    def gt_mask_path(self):
+        return os.path.join(self.workspace_path, self.scene_name, 'Groundtruth', 'GT_Mask')
     
     @property
     def single_mask_path(self):

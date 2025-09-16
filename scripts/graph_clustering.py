@@ -16,8 +16,9 @@ import json
 # internal
 from datasets.sfm_reader import load_sparse_model
 from datasets.overlap_detector import match_pair
-from datasets.mask_processor import merge_masks_to_npy
+from datasets.mask_processor import merge_masks
 from datasets.line3dpp_loader import parse_line_segments, parse_lines3dpp
+from datasets.lines3d_gt_generator import lines3d_gt_generator
 from utils.json2dict import json_decode_with_int, convert_sets
 from utils.config import get_config, PathManager
 from clustering.mask_association import load_mask_lines_association, associate_projline_to_mask
@@ -47,10 +48,11 @@ def load_and_process_data(path_manager, k_near):
     camerasInfo, points_in_images, points3d_xyz = load_sparse_model(path_manager.sparse_model_path)
     
     # Compute match matrix
-    match_matrix = match_pair(camerasInfo, points_in_images, k_near=k_near)
+    #match_matrix = match_pair(camerasInfo, points_in_images, k_near=k_near)
+    
     
     # Process masks
-    merge_masks_to_npy(path_manager.single_mask_path, path_manager.merged_mask_path)
+    merge_masks(path_manager.single_mask_path, path_manager.merged_mask_path)
     
     # Associate masks and lines
     all_mask_to_lines, all_line_to_mask = load_mask_lines_association(
@@ -63,6 +65,17 @@ def load_and_process_data(path_manager, k_near):
     # Parse line segments
     lines3d, residuals2d_for_lines3d = parse_lines3dpp(path_manager.line3dpp_path)
     line_corr = LineCorrespondence(residuals2d_for_lines3d)
+
+    # Generate 3D Line instanceID groudtruth
+    _, lines2d_instanceID_gt = load_mask_lines_association(
+        camerasInfo,
+        path_manager.gt_mask_path,
+        path_manager.line3dpp_path,
+        path_manager.groundtruth_path,
+    )
+    lines3d_instanceID_gt = lines3d_gt_generator(lines3d, residuals2d_for_lines3d, lines2d_instanceID_gt, 
+                                                 path_manager.groundtruth_path, show=True)
+
     
     return camerasInfo, points3d_xyz, all_line_to_mask, lines3d, line_corr
 
